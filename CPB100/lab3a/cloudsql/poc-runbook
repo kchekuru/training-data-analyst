@@ -35,7 +35,7 @@ gcloud projects add-iam-policy-binding ${PROJECT_ID} \
 
 gcloud pubsub topics create ${PUBSUB_TOPIC}
 
-#Create a Cloud Function [ main.py ]
+#Create a Cloud Function [ main.py ] and [requirements.txt]
 
 #Deploy the Cloud Function
 
@@ -45,7 +45,7 @@ gcloud functions deploy ${GCF_NAME} \
     --entry-point main \
     --service-account ${GCF_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
 
-#Create a Cloud Scheduler job and send message to backup/export test_transformed_bin_normalized every 4 hours
+#Create a Cloud Scheduler job and send message to backup/export transformed_bin_normalized every 4 hours
 gcloud app create --region=${REGION}
 gcloud scheduler jobs create pubsub ${SCHEDULER_JOB} --schedule '* */4 * * *' --topic ${PUBSUB_TOPIC} --message-body '{"db":"test_transformed_bin_normalized","instance":'\"${SQL_INSTANCE}\"',"project":'\"${PROJECT_ID}\"',"gs":'\"gs://${BUCKET_NAME}\"'}' --time-zone 'America/Los_Angeles'
 
@@ -58,4 +58,4 @@ gcloud scheduler jobs run ${SCHEDULER_JOB}
 gcloud sql operations list --instance ${SQL_INSTANCE} --limit 1
 
 #Verify storage for export
-gsutil ls gs://${BUCKET_NAME} | grep backup-test_transformed_bin_normalized
+gsutil ls gs://${BUCKET_NAME} | grep backup-transformed_bin_normalized

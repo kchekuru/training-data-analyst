@@ -1,7 +1,7 @@
 export PROJECT_ID=`gcloud config get-value project`
-export DEMO="rtr-sql-export-poc"
+export DEMO="rtr-poc"
 export BUCKET_NAME=${USER}-mssql-$(date +%s)
-export SQL_INSTANCE="${DEMO}-sql"
+export SQL_INSTANCE="sql-gouscnapd-rtr-d01-poc"
 export GCF_NAME="${DEMO}-gcf"
 export PUBSUB_TOPIC="${DEMO}-topic"
 export SCHEDULER_JOB="${DEMO}-job"

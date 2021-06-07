@@ -1,0 +1,61 @@
+#Create two custom roles that have only the permissions needed for this POC
+
+gcloud iam roles create ${STORAGE_ROLE} --project ${PROJECT_ID} \
+    --title "Simple Storage Role" \
+    --description "Grant permissions to view and create objects in Cloud Storage" \
+    --permissions "storage.objects.create,storage.objects.get"
+
+gcloud iam roles create ${SQL_ROLE} --project ${PROJECT_ID} \
+    --title "SQL Exporter Role" \
+    --description "Grant permissions to export data from a Cloud SQL instance to a Cloud Storage bucket as a SQL dump or CSV file" \
+    --permissions "cloudsql.instances.export"
+
+gsutil mb -l ${REGION} gs://${BUCKET_NAME}
+
+# Clone the cloned MSSQL instance, verify that the MSSQL Cloud SQL instance is running
+
+gcloud sql instances list --filter name=${SQL_INSTANCE}
+
+#Grant your Cloud SQL service account the permissions to export data to Cloud Storage with the Simple Storage Role:
+
+export SQL_SA=(`gcloud sql instances describe ${SQL_INSTANCE} \
+    --project ${PROJECT_ID} \
+    --format "value(serviceAccountEmailAddress)"`)
+
+gsutil iam ch serviceAccount:${SQL_SA}:projects/${PROJECT_ID}/roles/${STORAGE_ROLE} gs://${BUCKET_NAME}
+
+#Creating a Pub/Sub topic, a Cloud Function, and a Cloud Scheduler job
+
+gcloud iam service-accounts create ${GCF_NAME} \
+    --display-name "Service Account for GCF and SQL Admin API"
+
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+    --member="serviceAccount:${GCF_NAME}@${PROJECT_ID}.iam.gserviceaccount.com" \
+    --role="projects/${PROJECT_ID}/roles/${SQL_ROLE}"
+
+gcloud pubsub topics create ${PUBSUB_TOPIC}
+
+#Create a Cloud Function [ main.py ]
+
+#Deploy the Cloud Function
+
+gcloud functions deploy ${GCF_NAME} \
+    --trigger-topic ${PUBSUB_TOPIC} \
+    --runtime python37 \
+    --entry-point main \
+    --service-account ${GCF_NAME}@${PROJECT_ID}.iam.gserviceaccount.com
+
+#Create a Cloud Scheduler job and send message to backup/export test_transformed_bin_normalized every 4 hours
+gcloud app create --region=${REGION}
+gcloud scheduler jobs create pubsub ${SCHEDULER_JOB} --schedule '* */4 * * *' --topic ${PUBSUB_TOPIC} --message-body '{"db":"test_transformed_bin_normalized","instance":'\"${SQL_INSTANCE}\"',"project":'\"${PROJECT_ID}\"',"gs":'\"gs://${BUCKET_NAME}\"'}' --time-zone 'America/Los_Angeles'
+
+#Test POC
+
+#Manully trigger the export job
+gcloud scheduler jobs run ${SCHEDULER_JOB}
+
+#Verify export operation
+gcloud sql operations list --instance ${SQL_INSTANCE} --limit 1
+
+#Verify storage for export
+gsutil ls gs://${BUCKET_NAME} | grep backup-test_transformed_bin_normalized

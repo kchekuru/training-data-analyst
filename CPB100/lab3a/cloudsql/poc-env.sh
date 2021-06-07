@@ -1,0 +1,10 @@
+export PROJECT_ID=`gcloud config get-value project`
+export DEMO="rtr-sql-export-poc"
+export BUCKET_NAME=${USER}-mssql-$(date +%s)
+export SQL_INSTANCE="${DEMO}-sql"
+export GCF_NAME="${DEMO}-gcf"
+export PUBSUB_TOPIC="${DEMO}-topic"
+export SCHEDULER_JOB="${DEMO}-job"
+export SQL_ROLE="sqlExporter"
+export STORAGE_ROLE="simpleStorageRole"
+export REGION="us-central1"
